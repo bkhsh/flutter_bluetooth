@@ -1,6 +1,7 @@
 // For performing some operations asynchronously
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 // For using PlatformException
 import 'package:flutter/services.dart';
@@ -39,6 +40,9 @@ class _BluetoothAppState extends State<BluetoothApp> {
   BluetoothConnection connection;
 
   int _deviceState;
+
+  bool isReadyToGo = false;
+  // var bufferUint;
 
   bool isDisconnecting = false;
 
@@ -267,7 +271,9 @@ class _BluetoothAppState extends State<BluetoothApp> {
                             RaisedButton(
                               onPressed: _isButtonUnavailable
                                   ? null
-                                  : _connected ? _disconnect : _connect,
+                                  : _connected
+                                      ? _disconnect
+                                      : _connect,
                               child:
                                   Text(_connected ? 'Disconnect' : 'Connect'),
                             ),
@@ -400,7 +406,10 @@ class _BluetoothAppState extends State<BluetoothApp> {
             _connected = true;
           });
 
-          connection.input.listen(null).onDone(() {
+          connection.input.listen((Uint8List data) {
+            //Data entry point
+            print(ascii.decode(data));
+          }).onDone(() {
             if (isDisconnecting) {
               print('Disconnecting locally!');
             } else {
@@ -415,37 +424,12 @@ class _BluetoothAppState extends State<BluetoothApp> {
           print(error);
         });
         show('Device connected');
+        isReadyToGo = true;
 
         setState(() => _isButtonUnavailable = false);
       }
     }
   }
-
-  // void _onDataReceived(Uint8List data) {
-  //   // Allocate buffer for parsed data
-  //   int backspacesCounter = 0;
-  //   data.forEach((byte) {
-  //     if (byte == 8 || byte == 127) {
-  //       backspacesCounter++;
-  //     }
-  //   });
-  //   Uint8List buffer = Uint8List(data.length - backspacesCounter);
-  //   int bufferIndex = buffer.length;
-
-  //   // Apply backspace control character
-  //   backspacesCounter = 0;
-  //   for (int i = data.length - 1; i >= 0; i--) {
-  //     if (data[i] == 8 || data[i] == 127) {
-  //       backspacesCounter++;
-  //     } else {
-  //       if (backspacesCounter > 0) {
-  //         backspacesCounter--;
-  //       } else {
-  //         buffer[--bufferIndex] = data[i];
-  //       }
-  //     }
-  //   }
-  // }
 
   // Method to disconnect bluetooth
   void _disconnect() async {
