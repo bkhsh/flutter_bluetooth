@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+// import 'dart:ffi';
 
 // For using PlatformException
 import 'package:flutter/services.dart';
@@ -41,8 +42,35 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   int _deviceState;
 
+  List<int> outList = List<int>(19);
+  List<int> intList = [
+    0,
+    7,
+    16,
+    25,
+    34,
+    44,
+    54,
+    63,
+    72,
+    81,
+    91,
+    101,
+    111,
+    121,
+    131,
+    141,
+    151,
+    161,
+    171,
+    181
+  ];
   bool isReadyToGo = false;
-  // var bufferUint;
+  final int linelength = 183;
+  int buffHead = 0, buffTail = 0;
+  Uint8List buffByteList = Uint8List(100000);
+  String buffString;
+  // List<List<double>> buffDoubleList = new List.generate(1000, (index) => []);
 
   bool isDisconnecting = false;
 
@@ -63,6 +91,113 @@ class _BluetoothAppState extends State<BluetoothApp> {
   BluetoothDevice _device;
   bool _connected = false;
   bool _isButtonUnavailable = false;
+
+  void outView() {
+    // int temp = 0;
+    print(outList[2]);
+  }
+
+  int parseBuffer() {
+    // int buffHead = 0, buffTail = 0;
+    // Uint8List buffByteList = Uint8List(100000);
+    // String buffString;
+
+    Uint8List ui8 = Uint8List(linelength);
+    var ui8Temp;
+    bool readyNow = false;
+    bool absolutelyReadyNow = false;
+
+    for (int i = 0; i < linelength + 1; i++) {
+      if ((buffTail + i) < buffByteList.length) {
+        if (buffByteList[buffTail + i] == 0x0D) {
+          readyNow = true;
+          buffTail = buffTail + i + 1;
+          break;
+        }
+      } else {
+        if (buffByteList[buffTail + i - buffByteList.length] == 0x0D) {
+          readyNow = true;
+          buffTail = buffTail + i - buffByteList.length + 1;
+          break;
+        }
+      }
+    }
+
+    if (readyNow && (buffTail + linelength < buffByteList.length)) {
+      if (buffByteList[buffTail + linelength] == 0x0D) {
+        absolutelyReadyNow = true;
+      }
+    } else if (readyNow && (buffTail + linelength >= buffByteList.length)) {
+      if (buffByteList[buffTail + linelength - buffByteList.length] == 0x0D) {
+        absolutelyReadyNow = true;
+      }
+    } else {
+      return 1;
+    }
+
+    if (absolutelyReadyNow == false) {
+      return 2;
+    }
+
+    for (int i = 0; i < linelength; i++) {
+      if ((buffTail + i) < buffByteList.length) {
+        ui8Temp = buffByteList[buffTail + i];
+      } else {
+        ui8Temp = buffByteList[buffTail + i - buffByteList.length];
+      }
+
+      // Only ' ', '+', '-', '0'... '9' are accepted
+      if (ui8Temp != 0x20 &&
+          ui8Temp != 0x2B &&
+          ui8Temp != 0x2D &&
+          ui8Temp != 0x30 &&
+          ui8Temp != 0x31 &&
+          ui8Temp != 0x32 &&
+          ui8Temp != 0x33 &&
+          ui8Temp != 0x34 &&
+          ui8Temp != 0x35 &&
+          ui8Temp != 0x36 &&
+          ui8Temp != 0x37 &&
+          ui8Temp != 0x38 &&
+          ui8Temp != 0x39) {
+        buffTail = buffTail + i + 1;
+        return 3;
+      }
+    }
+
+    for (int i = 0; i < linelength; i++) {
+      if ((buffTail + i) < buffByteList.length) {
+        ui8[i] = buffByteList[buffTail + i];
+      } else {
+        ui8[i] = buffByteList[buffTail + i - buffByteList.length];
+      }
+    }
+
+    try {
+      for (int i = 0; i < 19; i++) {
+        outList[i] =
+            int.parse(ascii.decode(ui8.sublist(intList[i], intList[i + 1])));
+      }
+    } catch (e) {
+      return 4;
+    }
+
+    return 0;
+  }
+
+  void addElement2Buff(Uint8List ui8l) {
+    for (int i = 0; i < ui8l.length; i++) {
+      if ((buffHead + i) < buffByteList.length)
+        buffByteList[buffHead + i] = ui8l[i];
+      else
+        buffByteList[buffHead + i - buffByteList.length] = ui8l[i];
+    }
+
+    if ((buffHead + ui8l.length) < buffByteList.length)
+      buffHead = buffHead + ui8l.length;
+    else
+      buffHead = buffHead + ui8l.length - buffByteList.length;
+  }
 
   @override
   void initState() {
@@ -408,7 +543,30 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
           connection.input.listen((Uint8List data) {
             //Data entry point
-            print(ascii.decode(data));
+
+            var returnVar = 9;
+            var buffACSII = data;
+
+            addElement2Buff(buffACSII);
+
+            if ((buffHead > buffTail) &&
+                ((buffHead - buffTail) > (2 * linelength + 2))) {
+              returnVar = parseBuffer();
+            } else if ((buffHead < buffTail) &&
+                ((buffByteList.length - (buffTail - buffHead)) >
+                    (2 * linelength + 2))) {
+              returnVar = parseBuffer();
+            }
+
+            // if (returnVar != 2 && returnVar != 9) {
+            //   print('Error? ');
+            //   print(returnVar);
+            // }
+
+            if (returnVar == 0) {
+              // Everything is done right and the outputs are in outList[19]
+              outView();
+            }
           }).onDone(() {
             if (isDisconnecting) {
               print('Disconnecting locally!');
