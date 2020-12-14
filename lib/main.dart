@@ -2,13 +2,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-// import 'dart:ffi';
 
 // For using PlatformException
 import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter_sparkline/flutter_sparkline.dart';
 import 'package:oscilloscope/oscilloscope.dart';
 
 void main() => runApp(MyApp());
@@ -42,6 +42,15 @@ class _BluetoothAppState extends State<BluetoothApp> {
   BluetoothConnection connection;
 
   int _deviceState;
+
+  // List<double> sampleData = List<double>(100);
+  var sampleData = [0.0, 1.0, 1.5, 2.0, 0.0, 0.0, -0.5, -1.0, -0.5, 0.0, 0.0];
+
+  var sampleData1 = [0.0, 0.0];
+  var sampleData2 = [0.0, 0.0];
+
+  List<double> traceOne = List();
+  List<double> traceTwo = List();
 
   List<int> outList = List<int>(19);
   List<int> intList = [
@@ -95,7 +104,13 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   void outView() {
     // int temp = 0;
-    print(outList[2]);
+    // print(outList[2]);
+    // sampleData1.add(outList[2].toDouble() / 1000000.0);
+    // sampleData2.add(outList[3].toDouble() / 1000000.0);
+    setState(() {
+      sampleData1.add(0.70.toDouble());
+      sampleData2.add(0.80.toDouble());
+    });
   }
 
   int parseBuffer() {
@@ -288,6 +303,29 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // Now, its time to build the UI
   @override
   Widget build(BuildContext context) {
+    // Create A Scope Display for Sine
+    Oscilloscope scopeOne = Oscilloscope(
+      showYAxis: true,
+      yAxisColor: Colors.orange,
+      padding: 20.0,
+      backgroundColor: Colors.white,
+      traceColor: Colors.green,
+      yAxisMax: 1.0,
+      yAxisMin: -1.0,
+      dataSet: sampleData1,
+    );
+
+    // Create A Scope Display for Cosine
+    Oscilloscope scopeTwo = Oscilloscope(
+      showYAxis: true,
+      padding: 20.0,
+      backgroundColor: Colors.white,
+      traceColor: Colors.yellow,
+      yAxisMax: 1.0,
+      yAxisMin: -1.0,
+      dataSet: sampleData2,
+    );
+
     return MaterialApp(
       home: Scaffold(
         key: _scaffoldKey,
@@ -440,6 +478,28 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           ],
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: new Container(
+                          width: 300,
+                          height: 200,
+                          child: new Flexible(flex: 1, child: scopeOne),
+                          // child: new Sparkline(
+                          //   data: sampleData,
+                          // ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: new Container(
+                          width: 300,
+                          height: 200,
+                          child: new Flexible(flex: 2, child: scopeTwo),
+                          // child: new Sparkline(
+                          //   data: sampleData,
+                          // ),
+                        ),
+                      ),
                     ],
                   ),
                   Container(
@@ -552,28 +612,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
         _isButtonUnavailable = false;
       });
     }
-  }
-
-  // Method to send message,
-  // for turning the Bluetooth device on
-  void _sendOnMessageToBluetooth() async {
-    connection.output.add(utf8.encode("1" + "\r\n"));
-    await connection.output.allSent;
-    show('Device Turned On');
-    setState(() {
-      _deviceState = 1; // device on
-    });
-  }
-
-  // Method to send message,
-  // for turning the Bluetooth device off
-  void _sendOffMessageToBluetooth() async {
-    connection.output.add(utf8.encode("0" + "\r\n"));
-    await connection.output.allSent;
-    show('Device Turned Off');
-    setState(() {
-      _deviceState = -1; // device off
-    });
   }
 
   // Method to show a Snackbar,
