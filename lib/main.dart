@@ -8,8 +8,8 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-import 'package:flutter_sparkline/flutter_sparkline.dart';
-import 'package:oscilloscope/oscilloscope.dart';
+// import 'package:flutter_sparkline/flutter_sparkline.dart';
+// import 'package:oscilloscope/oscilloscope.dart';
 
 void main() => runApp(MyApp());
 
@@ -105,12 +105,11 @@ class _BluetoothAppState extends State<BluetoothApp> {
   void outView() {
     // int temp = 0;
     // print(outList[2]);
-    // sampleData1.add(outList[2].toDouble() / 1000000.0);
-    // sampleData2.add(outList[3].toDouble() / 1000000.0);
-    setState(() {
-      sampleData1.add(0.70.toDouble());
-      sampleData2.add(0.80.toDouble());
-    });
+    // setState(() {
+    //   sampleData1.add(outList[2].toDouble() / 250000.0);
+    //   sampleData2.add(outList[3].toDouble() / 250000.0);
+    // });
+    //
   }
 
   int parseBuffer() {
@@ -303,28 +302,26 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // Now, its time to build the UI
   @override
   Widget build(BuildContext context) {
-    // Create A Scope Display for Sine
-    Oscilloscope scopeOne = Oscilloscope(
-      showYAxis: true,
-      yAxisColor: Colors.orange,
-      padding: 20.0,
-      backgroundColor: Colors.white,
-      traceColor: Colors.green,
-      yAxisMax: 1.0,
-      yAxisMin: -1.0,
-      dataSet: sampleData1,
-    );
+    // Oscilloscope scopeOne = Oscilloscope(
+    //   showYAxis: true,
+    //   yAxisColor: Colors.orange,
+    //   padding: 20.0,
+    //   backgroundColor: Colors.white,
+    //   traceColor: Colors.green,
+    //   yAxisMax: 1.0,
+    //   yAxisMin: -1.0,
+    //   dataSet: traceOne,
+    // );
 
-    // Create A Scope Display for Cosine
-    Oscilloscope scopeTwo = Oscilloscope(
-      showYAxis: true,
-      padding: 20.0,
-      backgroundColor: Colors.white,
-      traceColor: Colors.yellow,
-      yAxisMax: 1.0,
-      yAxisMin: -1.0,
-      dataSet: sampleData2,
-    );
+    // Oscilloscope scopeTwo = Oscilloscope(
+    //   showYAxis: true,
+    //   padding: 20.0,
+    //   backgroundColor: Colors.white,
+    //   traceColor: Colors.yellow,
+    //   yAxisMax: 1.0,
+    //   yAxisMin: -1.0,
+    //   dataSet: traceTwo,
+    // );
 
     return MaterialApp(
       home: Scaffold(
@@ -483,10 +480,9 @@ class _BluetoothAppState extends State<BluetoothApp> {
                         child: new Container(
                           width: 300,
                           height: 200,
-                          child: new Flexible(flex: 1, child: scopeOne),
-                          // child: new Sparkline(
-                          //   data: sampleData,
-                          // ),
+                          // child: new Flexible(flex: 1, child: scopeOne),
+                          // child: new Sparkline(data: sampleData),
+                          child: new Text('OK! ' + 79.toString()),
                         ),
                       ),
                       Padding(
@@ -494,10 +490,9 @@ class _BluetoothAppState extends State<BluetoothApp> {
                         child: new Container(
                           width: 300,
                           height: 200,
-                          child: new Flexible(flex: 2, child: scopeTwo),
-                          // child: new Sparkline(
-                          //   data: sampleData,
-                          // ),
+                          // child: new Flexible(flex: 2, child: scopeTwo),
+                          // child: new Sparkline(data: sampleData),
+                          child: new Text('OK! ' + 76.toString()),
                         ),
                       ),
                     ],
