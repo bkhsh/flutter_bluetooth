@@ -128,6 +128,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
     tempDouble = 0.0;
     for (int i = 0; i < 10; i++) tempDouble += traceTwo[i];
     traceTwoMean = tempDouble / 10.0;
+
+    if (traceIndex == 0) setState(() {});
   }
 
   int parseBuffer() {
@@ -511,7 +513,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           height: 100,
                           // child: new Flexible(flex: 2, child: scopeTwo),
                           // child: new Sparkline(data: sampleData),
-                          child: new Text('Parameter 2: ' + 76.toString()),
+                          child: new Text(
+                              'Parameter 2: ' + traceTwoMean.toString()),
                         ),
                       ),
                     ],
