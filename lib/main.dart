@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:smart_signal_processing/smart_signal_processing.dart';
 // import 'package:flutter_sparkline/flutter_sparkline.dart';
 // import 'package:oscilloscope/oscilloscope.dart';
 
@@ -49,8 +50,10 @@ class _BluetoothAppState extends State<BluetoothApp> {
   var sampleData1 = [0.0, 0.0];
   var sampleData2 = [0.0, 0.0];
 
-  List<double> traceOne = List();
-  List<double> traceTwo = List();
+  List<double> traceOne = List<double>(10);
+  double traceOneMean = 0.0;
+  List<double> traceTwo = List<double>(10);
+  double traceTwoMean = 0.0;
 
   List<int> outList = List<int>(19);
   List<int> intList = [
@@ -76,6 +79,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
     181
   ];
   bool isReadyToGo = false;
+  bool firstReceive = true;
+  int traceIndex = 0;
   final int linelength = 183;
   int buffHead = 0, buffTail = 0;
   Uint8List buffByteList = Uint8List(100000);
@@ -110,6 +115,19 @@ class _BluetoothAppState extends State<BluetoothApp> {
     //   sampleData2.add(outList[3].toDouble() / 250000.0);
     // });
     //
+    double tempDouble = 0.0;
+    traceOne[traceIndex] = outList[2].toDouble();
+    traceTwo[traceIndex] = outList[4].toDouble();
+
+    traceIndex++;
+    if (traceIndex > 9) traceIndex = 0;
+
+    for (int i = 0; i < 10; i++) tempDouble += traceOne[i];
+    traceOneMean = tempDouble / 10.0;
+
+    tempDouble = 0.0;
+    for (int i = 0; i < 10; i++) tempDouble += traceTwo[i];
+    traceTwoMean = tempDouble / 10.0;
   }
 
   int parseBuffer() {
@@ -479,20 +497,21 @@ class _BluetoothAppState extends State<BluetoothApp> {
                         padding: const EdgeInsets.all(10),
                         child: new Container(
                           width: 300,
-                          height: 200,
+                          height: 100,
                           // child: new Flexible(flex: 1, child: scopeOne),
                           // child: new Sparkline(data: sampleData),
-                          child: new Text('OK! ' + 79.toString()),
+                          child: new Text(
+                              'Parameter 1: ' + traceOneMean.toString()),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(10),
                         child: new Container(
                           width: 300,
-                          height: 200,
+                          height: 100,
                           // child: new Flexible(flex: 2, child: scopeTwo),
                           // child: new Sparkline(data: sampleData),
-                          child: new Text('OK! ' + 76.toString()),
+                          child: new Text('Parameter 2: ' + 76.toString()),
                         ),
                       ),
                     ],
@@ -545,7 +564,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
           });
 
           connection.input.listen((Uint8List data) {
-            //Data entry point
+            // Data entry point
+            // Let's do the following everytime something is recieved.
 
             var returnVar = 9;
             var buffACSII = data;
@@ -585,7 +605,18 @@ class _BluetoothAppState extends State<BluetoothApp> {
           print(error);
         });
         show('Device connected');
+
+        // Let's Begin! Now that we are connected, do the following once.
         isReadyToGo = true;
+        firstReceive = true;
+
+        traceIndex = 0;
+        for (int i = 0; i < 10; i++) {
+          traceOne[i] = 0;
+          traceTwo[i] = 0;
+        }
+        traceOneMean = 0.0;
+        traceTwoMean = 0.0;
 
         setState(() => _isButtonUnavailable = false);
       }
