@@ -1,7 +1,9 @@
 // For performing some operations asynchronously
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
+// import 'dart:core';
 
 // For using PlatformException
 import 'package:flutter/services.dart';
@@ -9,7 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:smart_signal_processing/smart_signal_processing.dart';
-// import 'package:flutter_sparkline/flutter_sparkline.dart';
+import 'package:flutter_sparkline/flutter_sparkline.dart';
 // import 'package:oscilloscope/oscilloscope.dart';
 
 void main() => runApp(MyApp());
@@ -49,11 +51,29 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   var sampleData1 = [0.0, 0.0];
   var sampleData2 = [0.0, 0.0];
+  int varCeil = 0;
+  static const varLength = 1000;
+  static const plotLength = 200;
+  int traceUpdatePeriod = 5;
+  List<double> trace1 = []; //List<double>(varLength);
+  double trace1m = 0.0;
+  List<double> trace2 = []; //List<double>(varLength);
+  double trace2m = 0.0;
+  List<double> trace3 = []; //List<double>(varLength);
+  double trace3m = 0.0;
+  List<double> trace4 = []; //List<double>(varLength);
+  double trace4m = 0.0;
+  List<double> trace5 = []; //List<double>(varLength);
+  double trace5m = 0.0;
+  List<double> trace6 = []; //List<double>(varLength);
+  double trace6m = 0.0;
+  List<double> trace7 = []; //List<double>(varLength);
+  double trace7m = 0.0;
+  List<double> trace8 = []; //List<double>(varLength);
+  double trace8m = 0.0;
 
-  List<double> traceOne = List<double>(10);
-  double traceOneMean = 0.0;
-  List<double> traceTwo = List<double>(10);
-  double traceTwoMean = 0.0;
+  List<double> plotData1 = List<double>(plotLength);
+  List<double> plotData2 = List<double>(plotLength);
 
   List<int> outList = List<int>(19);
   List<int> intList = [
@@ -80,12 +100,14 @@ class _BluetoothAppState extends State<BluetoothApp> {
   ];
   bool isReadyToGo = false;
   bool firstReceive = true;
-  int traceIndex = 0;
+  int traceCount = 0;
+  bool keepGoing = false;
+  bool ceilingReached = false;
+  bool doPlots = false;
   final int linelength = 183;
   int buffHead = 0, buffTail = 0;
   Uint8List buffByteList = Uint8List(100000);
   String buffString;
-  // List<List<double>> buffDoubleList = new List.generate(1000, (index) => []);
 
   bool isDisconnecting = false;
 
@@ -108,28 +130,91 @@ class _BluetoothAppState extends State<BluetoothApp> {
   bool _isButtonUnavailable = false;
 
   void outView() {
-    // int temp = 0;
-    // print(outList[2]);
-    // setState(() {
-    //   sampleData1.add(outList[2].toDouble() / 250000.0);
-    //   sampleData2.add(outList[3].toDouble() / 250000.0);
-    // });
-    //
+    // 0. Time
+    // 1. I7  2. O7_1  3. O7_2   4. D_OD7_1   5. D_OD7_2
+    // 6. I8  7. O8_1  8. O8_2   9. D_OD8_1  10. D_OD8_2
+    // 11. Delta_C_HbO2_1  12. Delta_C_HbO2_2
+    // 13. Delta_C_Hb_1    14. Delta_C_Hb_2
+    // 15. OXY_1  16. OXY_2
+    // 17. BV_1   18. BV_2
+
     double tempDouble = 0.0;
-    traceOne[traceIndex] = outList[2].toDouble();
-    traceTwo[traceIndex] = outList[4].toDouble();
 
-    traceIndex++;
-    if (traceIndex > 9) traceIndex = 0;
+    if (doPlots == false && traceCount > 10) doPlots = true;
 
-    for (int i = 0; i < 10; i++) tempDouble += traceOne[i];
-    traceOneMean = tempDouble / 10.0;
+    if (ceilingReached == false && traceCount > varLength)
+      ceilingReached = true;
+    // Removing the first element and
+    // Adding a number to the end of the list
+    if (ceilingReached == true) trace1.removeAt(0);
+    trace1.add(outList[2].toDouble()); // O7_1
+    if (ceilingReached == true) trace2.removeAt(0);
+    trace2.add(outList[4].toDouble()); // D_OD7_1
+    if (ceilingReached == true) trace3.removeAt(0);
+    trace3.add(outList[7].toDouble()); // O8_1
+    if (ceilingReached == true) trace4.removeAt(0);
+    trace4.add(outList[9].toDouble()); // D_OD8_1
+    if (ceilingReached == true) trace5.removeAt(0);
+    trace5.add(outList[11].toDouble()); // Delta_C_HbO2_1
+    if (ceilingReached == true) trace6.removeAt(0);
+    trace6.add(outList[13].toDouble()); // Delta_C_Hb_1
+    if (ceilingReached == true) trace7.removeAt(0);
+    trace7.add(outList[15].toDouble()); // OXY_1
+    if (ceilingReached == true) trace8.removeAt(0);
+    trace8.add(outList[17].toDouble()); // BV_1
 
-    tempDouble = 0.0;
-    for (int i = 0; i < 10; i++) tempDouble += traceTwo[i];
-    traceTwoMean = tempDouble / 10.0;
+    traceCount++;
+    if (keepGoing == false && traceCount > traceUpdatePeriod) {
+      keepGoing = true;
+    }
+    if (keepGoing == true) {
+      tempDouble = 0.0;
+      varCeil = min(traceCount, varLength);
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace1[i - 1];
+      trace1m = tempDouble / traceUpdatePeriod.toDouble();
 
-    if (traceIndex == 0) setState(() {});
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace2[i - 1];
+      trace2m = tempDouble / traceUpdatePeriod.toDouble();
+
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace3[i - 1];
+      trace3m = tempDouble / traceUpdatePeriod.toDouble();
+
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace4[i - 1];
+      trace4m = tempDouble / traceUpdatePeriod.toDouble();
+
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace5[i - 1];
+      trace5m = tempDouble / traceUpdatePeriod.toDouble();
+
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace6[i - 1];
+      trace6m = tempDouble / traceUpdatePeriod.toDouble();
+
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace7[i - 1];
+      trace7m = tempDouble / traceUpdatePeriod.toDouble();
+
+      tempDouble = 0.0;
+      for (int i = varCeil; i > varCeil - traceUpdatePeriod; i--)
+        tempDouble += trace8[i - 1];
+      trace8m = tempDouble / traceUpdatePeriod.toDouble();
+
+      if (doPlots == true) {
+        plotData1 = trace1.sublist(max(1, varCeil - plotLength), varCeil);
+        plotData2 = trace3.sublist(max(1, varCeil - plotLength), varCeil);
+        if ((traceCount % traceUpdatePeriod) == 0) setState(() {});
+      }
+    }
   }
 
   int parseBuffer() {
@@ -496,25 +581,111 @@ class _BluetoothAppState extends State<BluetoothApp> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: new Container(
-                          width: 300,
-                          height: 100,
-                          // child: new Flexible(flex: 1, child: scopeOne),
-                          // child: new Sparkline(data: sampleData),
-                          child: new Text(
-                              'Parameter 1: ' + traceOneMean.toString()),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10.0, vertical: 10.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Text(
+                              'O730: ' + trace1m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Delta_OD730: ' + trace2m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10.0, vertical: 10.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Text(
+                              'O850: ' + trace3m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Delta_OD850: ' + trace4m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10.0, vertical: 10.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Text(
+                              'Delta_C_HbO2: ' + trace5m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Delta_C_Hb: ' + trace6m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10.0, vertical: 10.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Text(
+                              'OXY: ' + trace7m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'BV: ' + trace8m.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(10),
                         child: new Container(
                           width: 300,
-                          height: 100,
+                          height: 120,
+                          // child: new Flexible(flex: 1, child: scopeOne),
+                          child: (doPlots == true
+                              ? new Sparkline(data: plotData1)
+                              : new Text('Please wait!')),
+                          // child: new Text('OK! ' + 79.toString()),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: new Container(
+                          width: 300,
+                          height: 120,
                           // child: new Flexible(flex: 2, child: scopeTwo),
-                          // child: new Sparkline(data: sampleData),
-                          child: new Text(
-                              'Parameter 2: ' + traceTwoMean.toString()),
+                          child: (doPlots == true
+                              ? new Sparkline(data: plotData2)
+                              : new Text('Please wait!')),
+                          // child: new Text('OK! ' + 76.toString()),
                         ),
                       ),
                     ],
@@ -613,13 +784,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
         isReadyToGo = true;
         firstReceive = true;
 
-        traceIndex = 0;
-        for (int i = 0; i < 10; i++) {
-          traceOne[i] = 0;
-          traceTwo[i] = 0;
-        }
-        traceOneMean = 0.0;
-        traceTwoMean = 0.0;
+        traceCount = 0;
 
         setState(() => _isButtonUnavailable = false);
       }
@@ -635,6 +800,34 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
     await connection.close();
     show('Device disconnected');
+
+    trace1 = [];
+    trace2 = [];
+    trace3 = [];
+    trace4 = [];
+    trace5 = [];
+    trace6 = [];
+    trace7 = [];
+    trace8 = [];
+
+    trace1m = 0.0;
+    trace2m = 0.0;
+    trace3m = 0.0;
+    trace4m = 0.0;
+    trace5m = 0.0;
+    trace6m = 0.0;
+    trace7m = 0.0;
+    trace8m = 0.0;
+
+    isReadyToGo = false;
+    firstReceive = true;
+    traceCount = 0;
+    keepGoing = false;
+    ceilingReached = false;
+    doPlots = false;
+    buffHead = 0;
+    buffTail = 0;
+
     if (!connection.isConnected) {
       setState(() {
         _connected = false;
