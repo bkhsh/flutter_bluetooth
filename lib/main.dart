@@ -50,8 +50,11 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // List<double> sampleData = List<double>(100);
   var sampleData = [0.0, 1.0, 1.5, 2.0, 0.0, 0.0, -0.5, -1.0, -0.5, 0.0, 0.0];
 
-  String tempStringTimeNow =
-      'Recorded_at_' + DateTime.now().toString().replaceAll(RegExp(':'), '_');
+  String tempStringTimeNow = 'Recorded_at_' +
+      DateTime.now()
+          .toString()
+          .replaceAll(RegExp(' '), '_')
+          .replaceAll(RegExp(':'), '-');
 
   String fileNameBasedOnTime;
 
@@ -379,10 +382,10 @@ class _BluetoothAppState extends State<BluetoothApp> {
     });
 
     fileNameBasedOnTime =
-        tempStringTimeNow.substring(1, tempStringTimeNow.length - 7) + '.txt';
-    // writeData('Hello! Hello! Good to be back!! Good to be back!!!');
-    // outputObserver = writeSomething();
+        tempStringTimeNow.substring(0, tempStringTimeNow.length - 7) + '.txt';
+    writeData(' \r\n');
     writeData('fNIRS data is recorded with following columns:\r\n\r\n');
+
     var tempStringInfo = '0. Time\r\n' +
         '1. I7  2. O7_1  3. O7_2   4. D_OD7_1   5. D_OD7_2\r\n' +
         '6. I8  7. O8_1  8. O8_2   9. D_OD8_1  10. D_OD8_2\r\n' +
