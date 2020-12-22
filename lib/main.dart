@@ -3,14 +3,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:io';
 // import 'dart:core';
 
 // For using PlatformException
 import 'package:flutter/services.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:smart_signal_processing/smart_signal_processing.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_sparkline/flutter_sparkline.dart';
 // import 'package:oscilloscope/oscilloscope.dart';
 
@@ -49,8 +50,14 @@ class _BluetoothAppState extends State<BluetoothApp> {
   // List<double> sampleData = List<double>(100);
   var sampleData = [0.0, 1.0, 1.5, 2.0, 0.0, 0.0, -0.5, -1.0, -0.5, 0.0, 0.0];
 
+  String tempStringTimeNow =
+      'Recorded_at_' + DateTime.now().toString().replaceAll(RegExp(':'), '_');
+
+  String fileNameBasedOnTime;
+
   var sampleData1 = [0.0, 0.0];
   var sampleData2 = [0.0, 0.0];
+  var outputObserver;
   int varCeil = 0;
   static const varLength = 1000;
   static const plotLength = 200;
@@ -128,6 +135,45 @@ class _BluetoothAppState extends State<BluetoothApp> {
   BluetoothDevice _device;
   bool _connected = false;
   bool _isButtonUnavailable = false;
+  Future<String> get _localPath async {
+    final directory = await getExternalStorageDirectory();
+
+    return directory.path;
+  }
+
+  Future<File> get _localFile async {
+    final path = await _localPath;
+    return File('$path/' + fileNameBasedOnTime);
+  }
+
+  Future<int> readCounter() async {
+    try {
+      final file = await _localFile;
+
+      // Read the file
+      String contents = await file.readAsString();
+
+      return int.parse(contents);
+    } catch (e) {
+      // If encountering an error, return 0
+      return 0;
+    }
+  }
+
+  Future<File> writeData(String thisData) async {
+    final file = await _localFile;
+
+    // Write the file
+    return file.writeAsString(thisData, mode: FileMode.append);
+  }
+
+  // Future<File> writeSomething() async {
+  //   final file = await _localFile;
+
+  //   // Write the file
+  //   return file
+  //       .writeAsString('Hello! Hello! Good to be back!! Good to be back!!!');
+  // }
 
   void outView() {
     // 0. Time
@@ -302,6 +348,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
       return 4;
     }
 
+    writeData(ascii.decode(ui8) + '\r');
+
     return 0;
   }
 
@@ -329,6 +377,20 @@ class _BluetoothAppState extends State<BluetoothApp> {
         _bluetoothState = state;
       });
     });
+
+    fileNameBasedOnTime =
+        tempStringTimeNow.substring(1, tempStringTimeNow.length - 7) + '.txt';
+    // writeData('Hello! Hello! Good to be back!! Good to be back!!!');
+    // outputObserver = writeSomething();
+    writeData('fNIRS data is recorded with following columns:\r\n\r\n');
+    var tempStringInfo = '0. Time\r\n' +
+        '1. I7  2. O7_1  3. O7_2   4. D_OD7_1   5. D_OD7_2\r\n' +
+        '6. I8  7. O8_1  8. O8_2   9. D_OD8_1  10. D_OD8_2\r\n' +
+        '11. Delta_C_HbO2_1  12. Delta_C_HbO2_2\r\n' +
+        '13. Delta_C_Hb_1    14. Delta_C_Hb_2\r\n' +
+        '15. OXY_1  16. OXY_2\r\n' +
+        '17. BV_1   18. BV_2\r\n\r\n';
+    writeData(tempStringInfo);
 
     _deviceState = 0; // neutral
 
@@ -665,27 +727,43 @@ class _BluetoothAppState extends State<BluetoothApp> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 1),
+                        child: Text(
+                          'Detected Output 730 nm',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(1, 10, 10, 10),
                         child: new Container(
-                          width: 300,
+                          width: 350,
                           height: 120,
                           // child: new Flexible(flex: 1, child: scopeOne),
                           child: (doPlots == true
                               ? new Sparkline(data: plotData1)
                               : new Text('Please wait!')),
-                          // child: new Text('OK! ' + 79.toString()),
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 1),
+                        child: Text(
+                          'Detected Output 850 nm',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(1, 10, 10, 10),
                         child: new Container(
-                          width: 300,
+                          width: 350,
                           height: 120,
                           // child: new Flexible(flex: 2, child: scopeTwo),
                           child: (doPlots == true
                               ? new Sparkline(data: plotData2)
                               : new Text('Please wait!')),
-                          // child: new Text('OK! ' + 76.toString()),
                         ),
                       ),
                     ],
