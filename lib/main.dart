@@ -65,6 +65,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
   static const varLength = 1000;
   static const plotLength = 200;
   int traceUpdatePeriod = 5;
+  List<double> trace0 = []; //List<double>(varLength);
+  double trace0m = 0.0;
   List<double> trace1 = []; //List<double>(varLength);
   double trace1m = 0.0;
   List<double> trace2 = []; //List<double>(varLength);
@@ -195,6 +197,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
       ceilingReached = true;
     // Removing the first element and
     // Adding a number to the end of the list
+    if (ceilingReached == true) trace0.removeAt(0);
+    trace0.add(outList[0].toDouble()); // Time
     if (ceilingReached == true) trace1.removeAt(0);
     trace1.add(outList[2].toDouble()); // O7_1
     if (ceilingReached == true) trace2.removeAt(0);
@@ -652,34 +656,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: <Widget>[
                             Text(
-                              'O730: ' + trace1m.toStringAsFixed(2),
+                              'O730: ' +
+                                  (trace1m / 1000000.0).toStringAsFixed(3) +
+                                  ' V',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'Delta_OD730: ' + trace2m.toStringAsFixed(2),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10.0, vertical: 10.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: <Widget>[
-                            Text(
-                              'O850: ' + trace3m.toStringAsFixed(2),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Delta_OD850: ' + trace4m.toStringAsFixed(2),
+                              'Delta_OD730: ' +
+                                  (trace2m / 1.0).toStringAsFixed(0) +
+                                  ' \u00B5V',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -694,13 +681,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: <Widget>[
                             Text(
-                              'Delta_C_HbO2: ' + trace5m.toStringAsFixed(2),
+                              'O850: ' +
+                                  (trace3m / 1000000.0).toStringAsFixed(3) +
+                                  ' V',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'Delta_C_Hb: ' + trace6m.toStringAsFixed(2),
+                              'Delta_OD850: ' +
+                                  (trace4m / 1.0).toStringAsFixed(0) +
+                                  ' \u00B5V',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -715,13 +706,42 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: <Widget>[
                             Text(
-                              'OXY: ' + trace7m.toStringAsFixed(2),
+                              'Delta_C_HbO2: ' +
+                                  (trace5m / 1.0).toStringAsFixed(0) +
+                                  ' \u00B5M',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'BV: ' + trace8m.toStringAsFixed(2),
+                              'Delta_C_Hb: ' +
+                                  (trace6m / 1.0).toStringAsFixed(0) +
+                                  ' \u00B5M',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10.0, vertical: 10.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Text(
+                              'OXY: ' +
+                                  (trace7m / 1.0).toStringAsFixed(0) +
+                                  ' \u00B5M',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'BV: ' +
+                                  (trace8m / 1.0).toStringAsFixed(0) +
+                                  ' \u00B5M',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -882,6 +902,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     await connection.close();
     show('Device disconnected');
 
+    trace0 = [];
     trace1 = [];
     trace2 = [];
     trace3 = [];
@@ -891,6 +912,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     trace7 = [];
     trace8 = [];
 
+    trace0m = 0.0;
     trace1m = 0.0;
     trace2m = 0.0;
     trace3m = 0.0;
