@@ -18,6 +18,11 @@ environment:
 
 dependencies:
   flutter_bluetooth_serial: ^0.2.2
+  smart_signal_processing: ^2.1.1
+  flutter_sparkline: ^0.1.0
+  # oscilloscope: ^0.0.3
+  path_provider: ^1.6.24
+
   flutter:
     sdk: flutter
 
