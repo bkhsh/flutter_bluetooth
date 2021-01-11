@@ -47,9 +47,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   int _deviceState;
 
-  // List<double> sampleData = List<double>(100);
-  var sampleData = [0.0, 1.0, 1.5, 2.0, 0.0, 0.0, -0.5, -1.0, -0.5, 0.0, 0.0];
-
   String tempStringTimeNow = 'Recorded_at_' +
       DateTime.now()
           .toString()
@@ -172,13 +169,109 @@ class _BluetoothAppState extends State<BluetoothApp> {
     return file.writeAsString(thisData, mode: FileMode.append);
   }
 
-  // Future<File> writeSomething() async {
-  //   final file = await _localFile;
+ void addElement2Buff(Uint8List ui8l) {
+    for (int i = 0; i < ui8l.length; i++) {
+      if ((buffHead + i) < buffByteList.length)
+        buffByteList[buffHead + i] = ui8l[i];
+      else
+        buffByteList[buffHead + i - buffByteList.length] = ui8l[i];
+    }
 
-  //   // Write the file
-  //   return file
-  //       .writeAsString('Hello! Hello! Good to be back!! Good to be back!!!');
-  // }
+    if ((buffHead + ui8l.length) < buffByteList.length)
+      buffHead = buffHead + ui8l.length;
+    else
+      buffHead = buffHead + ui8l.length - buffByteList.length;
+  }
+ 
+  int parseBuffer() {
+    // int buffHead = 0, buffTail = 0;
+    // Uint8List buffByteList = Uint8List(100000);
+    // String buffString;
+
+    Uint8List ui8 = Uint8List(linelength);
+    var ui8Temp;
+    bool readyNow = false;
+    bool absolutelyReadyNow = false;
+
+    for (int i = 0; i < linelength + 1; i++) {
+      if ((buffTail + i) < buffByteList.length) {
+        if (buffByteList[buffTail + i] == 0x0D) {
+          readyNow = true;
+          buffTail = buffTail + i + 1;
+          break;
+        }
+      } else {
+        if (buffByteList[buffTail + i - buffByteList.length] == 0x0D) {
+          readyNow = true;
+          buffTail = buffTail + i - buffByteList.length + 1;
+          break;
+        }
+      }
+    }
+
+    if (readyNow && (buffTail + linelength < buffByteList.length)) {
+      if (buffByteList[buffTail + linelength] == 0x0D) {
+        absolutelyReadyNow = true;
+      }
+    } else if (readyNow && (buffTail + linelength >= buffByteList.length)) {
+      if (buffByteList[buffTail + linelength - buffByteList.length] == 0x0D) {
+        absolutelyReadyNow = true;
+      }
+    } else {
+      return 1;
+    }
+
+    if (absolutelyReadyNow == false) {
+      return 2;
+    }
+
+    for (int i = 0; i < linelength; i++) {
+      if ((buffTail + i) < buffByteList.length) {
+        ui8Temp = buffByteList[buffTail + i];
+      } else {
+        ui8Temp = buffByteList[buffTail + i - buffByteList.length];
+      }
+
+      // Only ' ', '+', '-', '0'... '9' are accepted
+      if (ui8Temp != 0x20 &&
+          ui8Temp != 0x2B &&
+          ui8Temp != 0x2D &&
+          ui8Temp != 0x30 &&
+          ui8Temp != 0x31 &&
+          ui8Temp != 0x32 &&
+          ui8Temp != 0x33 &&
+          ui8Temp != 0x34 &&
+          ui8Temp != 0x35 &&
+          ui8Temp != 0x36 &&
+          ui8Temp != 0x37 &&
+          ui8Temp != 0x38 &&
+          ui8Temp != 0x39) {
+        buffTail = buffTail + i + 1;
+        return 3;
+      }
+    }
+
+    for (int i = 0; i < linelength; i++) {
+      if ((buffTail + i) < buffByteList.length) {
+        ui8[i] = buffByteList[buffTail + i];
+      } else {
+        ui8[i] = buffByteList[buffTail + i - buffByteList.length];
+      }
+    }
+
+    try {
+      for (int i = 0; i < 19; i++) {
+        outList[i] =
+            int.parse(ascii.decode(ui8.sublist(intList[i], intList[i + 1])));
+      }
+    } catch (e) {
+      return 4;
+    }
+
+    writeData(ascii.decode(ui8) + '\r');
+
+    return 0;
+  }
 
   void outView() {
     // 0. Time
@@ -270,110 +363,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
     }
   }
 
-  int parseBuffer() {
-    // int buffHead = 0, buffTail = 0;
-    // Uint8List buffByteList = Uint8List(100000);
-    // String buffString;
-
-    Uint8List ui8 = Uint8List(linelength);
-    var ui8Temp;
-    bool readyNow = false;
-    bool absolutelyReadyNow = false;
-
-    for (int i = 0; i < linelength + 1; i++) {
-      if ((buffTail + i) < buffByteList.length) {
-        if (buffByteList[buffTail + i] == 0x0D) {
-          readyNow = true;
-          buffTail = buffTail + i + 1;
-          break;
-        }
-      } else {
-        if (buffByteList[buffTail + i - buffByteList.length] == 0x0D) {
-          readyNow = true;
-          buffTail = buffTail + i - buffByteList.length + 1;
-          break;
-        }
-      }
-    }
-
-    if (readyNow && (buffTail + linelength < buffByteList.length)) {
-      if (buffByteList[buffTail + linelength] == 0x0D) {
-        absolutelyReadyNow = true;
-      }
-    } else if (readyNow && (buffTail + linelength >= buffByteList.length)) {
-      if (buffByteList[buffTail + linelength - buffByteList.length] == 0x0D) {
-        absolutelyReadyNow = true;
-      }
-    } else {
-      return 1;
-    }
-
-    if (absolutelyReadyNow == false) {
-      return 2;
-    }
-
-    for (int i = 0; i < linelength; i++) {
-      if ((buffTail + i) < buffByteList.length) {
-        ui8Temp = buffByteList[buffTail + i];
-      } else {
-        ui8Temp = buffByteList[buffTail + i - buffByteList.length];
-      }
-
-      // Only ' ', '+', '-', '0'... '9' are accepted
-      if (ui8Temp != 0x20 &&
-          ui8Temp != 0x2B &&
-          ui8Temp != 0x2D &&
-          ui8Temp != 0x30 &&
-          ui8Temp != 0x31 &&
-          ui8Temp != 0x32 &&
-          ui8Temp != 0x33 &&
-          ui8Temp != 0x34 &&
-          ui8Temp != 0x35 &&
-          ui8Temp != 0x36 &&
-          ui8Temp != 0x37 &&
-          ui8Temp != 0x38 &&
-          ui8Temp != 0x39) {
-        buffTail = buffTail + i + 1;
-        return 3;
-      }
-    }
-
-    for (int i = 0; i < linelength; i++) {
-      if ((buffTail + i) < buffByteList.length) {
-        ui8[i] = buffByteList[buffTail + i];
-      } else {
-        ui8[i] = buffByteList[buffTail + i - buffByteList.length];
-      }
-    }
-
-    try {
-      for (int i = 0; i < 19; i++) {
-        outList[i] =
-            int.parse(ascii.decode(ui8.sublist(intList[i], intList[i + 1])));
-      }
-    } catch (e) {
-      return 4;
-    }
-
-    writeData(ascii.decode(ui8) + '\r');
-
-    return 0;
-  }
-
-  void addElement2Buff(Uint8List ui8l) {
-    for (int i = 0; i < ui8l.length; i++) {
-      if ((buffHead + i) < buffByteList.length)
-        buffByteList[buffHead + i] = ui8l[i];
-      else
-        buffByteList[buffHead + i - buffByteList.length] = ui8l[i];
-    }
-
-    if ((buffHead + ui8l.length) < buffByteList.length)
-      buffHead = buffHead + ui8l.length;
-    else
-      buffHead = buffHead + ui8l.length - buffByteList.length;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -388,7 +377,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     fileNameBasedOnTime =
         tempStringTimeNow.substring(0, tempStringTimeNow.length - 7) + '.txt';
     writeData(' \r\n');
-    writeData('fNIRS data is recorded with following columns:\r\n\r\n');
+    writeData('Input data is recorded with following columns:\r\n\r\n');
 
     var tempStringInfo = '0. Time\r\n' +
         '1. I7  2. O7_1  3. O7_2   4. D_OD7_1   5. D_OD7_2\r\n' +
