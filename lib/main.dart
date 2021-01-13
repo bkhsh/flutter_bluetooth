@@ -55,13 +55,15 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   String fileNameBasedOnTime;
 
-  var sampleData1 = [0.0, 0.0];
-  var sampleData2 = [0.0, 0.0];
   var outputObserver;
+
+  final int linelength = 200;
+  final int listRows = 20;
+
   int varCeil = 0;
   static const varLength = 1000;
   static const plotLength = 200;
-  int traceUpdatePeriod = 5;
+  int traceUpdatePeriod = 4;
   List<double> trace0 = []; //List<double>(varLength);
   double trace0m = 0.0;
   List<double> trace1 = []; //List<double>(varLength);
@@ -84,28 +86,29 @@ class _BluetoothAppState extends State<BluetoothApp> {
   List<double> plotData1 = List<double>(plotLength);
   List<double> plotData2 = List<double>(plotLength);
 
-  List<int> outList = List<int>(19);
+  List<int> outList = List<int>(20);
   List<int> intList = [
     0,
-    7,
-    16,
-    25,
-    34,
-    44,
-    54,
-    63,
-    72,
-    81,
-    91,
-    101,
-    111,
-    121,
-    131,
-    141,
-    151,
-    161,
-    171,
-    181
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    110,
+    120,
+    130,
+    140,
+    150,
+    160,
+    170,
+    180,
+    190,
+    200
   ];
   bool isReadyToGo = false;
   bool firstReceive = true;
@@ -113,7 +116,6 @@ class _BluetoothAppState extends State<BluetoothApp> {
   bool keepGoing = false;
   bool ceilingReached = false;
   bool doPlots = false;
-  final int linelength = 183;
   int buffHead = 0, buffTail = 0;
   Uint8List buffByteList = Uint8List(100000);
   String buffString;
@@ -195,13 +197,13 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
     for (int i = 0; i < linelength + 1; i++) {
       if ((buffTail + i) < buffByteList.length) {
-        if (buffByteList[buffTail + i] == 0x0D) {
+        if (buffByteList[buffTail + i] == 0x00) {
           readyNow = true;
           buffTail = buffTail + i + 1;
           break;
         }
       } else {
-        if (buffByteList[buffTail + i - buffByteList.length] == 0x0D) {
+        if (buffByteList[buffTail + i - buffByteList.length] == 0x00) {
           readyNow = true;
           buffTail = buffTail + i - buffByteList.length + 1;
           break;
@@ -210,11 +212,11 @@ class _BluetoothAppState extends State<BluetoothApp> {
     }
 
     if (readyNow && (buffTail + linelength < buffByteList.length)) {
-      if (buffByteList[buffTail + linelength] == 0x0D) {
+      if (buffByteList[buffTail + linelength] == 0x00) {
         absolutelyReadyNow = true;
       }
     } else if (readyNow && (buffTail + linelength >= buffByteList.length)) {
-      if (buffByteList[buffTail + linelength - buffByteList.length] == 0x0D) {
+      if (buffByteList[buffTail + linelength - buffByteList.length] == 0x00) {
         absolutelyReadyNow = true;
       }
     } else {
@@ -260,7 +262,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
     }
 
     try {
-      for (int i = 0; i < 19; i++) {
+      for (int i = 0; i < listRows; i++) {
         outList[i] =
             int.parse(ascii.decode(ui8.sublist(intList[i], intList[i + 1])));
       }
@@ -275,16 +277,12 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
   void outView() {
     // 0. Time
-    // 1. I7  2. O7_1  3. O7_2   4. D_OD7_1   5. D_OD7_2
-    // 6. I8  7. O8_1  8. O8_2   9. D_OD8_1  10. D_OD8_2
-    // 11. Delta_C_HbO2_1  12. Delta_C_HbO2_2
-    // 13. Delta_C_Hb_1    14. Delta_C_Hb_2
-    // 15. OXY_1  16. OXY_2
-    // 17. BV_1   18. BV_2
+    // 1. Temperature  2. Humidity  3. Latitude   4. Longitude   5. Elevation
+    // 6. Activity  7. Not Determined Yet  8. Not Determined Yet  
 
     double tempDouble = 0.0;
 
-    if (doPlots == false && traceCount > 10) doPlots = true;
+    if (doPlots == false && traceCount > 4) doPlots = true;
 
     if (ceilingReached == false && traceCount > varLength)
       ceilingReached = true;
@@ -293,21 +291,21 @@ class _BluetoothAppState extends State<BluetoothApp> {
     if (ceilingReached == true) trace0.removeAt(0);
     trace0.add(outList[0].toDouble()); // Time
     if (ceilingReached == true) trace1.removeAt(0);
-    trace1.add(outList[2].toDouble()); // O7_1
+    trace1.add(outList[1].toDouble()); // Temperature
     if (ceilingReached == true) trace2.removeAt(0);
-    trace2.add(outList[4].toDouble()); // D_OD7_1
+    trace2.add(outList[2].toDouble()); // Humidity
     if (ceilingReached == true) trace3.removeAt(0);
-    trace3.add(outList[7].toDouble()); // O8_1
+    trace3.add(outList[3].toDouble()); // Latitude
     if (ceilingReached == true) trace4.removeAt(0);
-    trace4.add(outList[9].toDouble()); // D_OD8_1
+    trace4.add(outList[4].toDouble()); // Longitude
     if (ceilingReached == true) trace5.removeAt(0);
-    trace5.add(outList[11].toDouble()); // Delta_C_HbO2_1
+    trace5.add(outList[5].toDouble()); // Elevation
     if (ceilingReached == true) trace6.removeAt(0);
-    trace6.add(outList[13].toDouble()); // Delta_C_Hb_1
+    trace6.add(outList[6].toDouble()); // Activity
     if (ceilingReached == true) trace7.removeAt(0);
-    trace7.add(outList[15].toDouble()); // OXY_1
+    trace7.add(outList[7].toDouble()); // Not Determined Yet
     if (ceilingReached == true) trace8.removeAt(0);
-    trace8.add(outList[17].toDouble()); // BV_1
+    trace8.add(outList[8].toDouble()); // Not Determined Yet
 
     traceCount++;
     if (keepGoing == false && traceCount > traceUpdatePeriod) {
@@ -357,7 +355,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
 
       if (doPlots == true) {
         plotData1 = trace1.sublist(max(1, varCeil - plotLength), varCeil);
-        plotData2 = trace3.sublist(max(1, varCeil - plotLength), varCeil);
+        plotData2 = trace2.sublist(max(1, varCeil - plotLength), varCeil);
         if ((traceCount % traceUpdatePeriod) == 0) setState(() {});
       }
     }
@@ -380,12 +378,8 @@ class _BluetoothAppState extends State<BluetoothApp> {
     writeData('Input data is recorded with following columns:\r\n\r\n');
 
     var tempStringInfo = '0. Time\r\n' +
-        '1. I7  2. O7_1  3. O7_2   4. D_OD7_1   5. D_OD7_2\r\n' +
-        '6. I8  7. O8_1  8. O8_2   9. D_OD8_1  10. D_OD8_2\r\n' +
-        '11. Delta_C_HbO2_1  12. Delta_C_HbO2_2\r\n' +
-        '13. Delta_C_Hb_1    14. Delta_C_Hb_2\r\n' +
-        '15. OXY_1  16. OXY_2\r\n' +
-        '17. BV_1   18. BV_2\r\n\r\n';
+        '1. Temperature  2. Humidity  3. Latitude   4. Longitude\r\n' +
+        '5. Elevation  6. Activity  7. Not Determined Yet  8. Not Determined Yet\r\n\r\n\r\n';
     writeData(tempStringInfo);
 
     _deviceState = 0; // neutral
@@ -645,17 +639,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: <Widget>[
                             Text(
-                              'O730: ' +
-                                  (trace1m / 1000000.0).toStringAsFixed(3) +
-                                  ' V',
+                              'Temp.: ' +
+                                  (trace1m / 100.0).toStringAsFixed(1) +
+                                  ' \u00B0C',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'Delta_OD730: ' +
-                                  (trace2m / 1.0).toStringAsFixed(0) +
-                                  ' \u00B5V',
+                              'Humidity: ' +
+                                  (trace2m / 100.0).toStringAsFixed(1) +
+                                  ' %',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -670,17 +664,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: <Widget>[
                             Text(
-                              'O850: ' +
-                                  (trace3m / 1000000.0).toStringAsFixed(3) +
-                                  ' V',
+                              'Latitude: ' +
+                                  (trace3m / 100.0).toStringAsFixed(2) +
+                                  ' ',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'Delta_OD850: ' +
-                                  (trace4m / 1.0).toStringAsFixed(0) +
-                                  ' \u00B5V',
+                              'Longitude: ' +
+                                  (trace4m / 100.0).toStringAsFixed(2) +
+                                  ' ',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -695,17 +689,17 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: <Widget>[
                             Text(
-                              'Delta_C_HbO2: ' +
-                                  (trace5m / 1.0).toStringAsFixed(0) +
-                                  ' \u00B5M',
+                              'Elevation: ' +
+                                  (trace5m / 100.0).toStringAsFixed(1) +
+                                  ' m',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'Delta_C_Hb: ' +
-                                  (trace6m / 1.0).toStringAsFixed(0) +
-                                  ' \u00B5M',
+                              'Activity: ' +
+                                  (trace6m / 100.0).toStringAsFixed(1) +
+                                  ' %',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -713,35 +707,35 @@ class _BluetoothAppState extends State<BluetoothApp> {
                           ],
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10.0, vertical: 10.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: <Widget>[
-                            Text(
-                              'OXY: ' +
-                                  (trace7m / 1.0).toStringAsFixed(0) +
-                                  ' \u00B5M',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'BV: ' +
-                                  (trace8m / 1.0).toStringAsFixed(0) +
-                                  ' \u00B5M',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // Padding(
+                      //   padding: const EdgeInsets.symmetric(
+                      //       horizontal: 10.0, vertical: 10.0),
+                      //   child: Row(
+                      //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      //     children: <Widget>[
+                      //       Text(
+                      //         'OXY: ' +
+                      //             (trace7m / 100.0).toStringAsFixed(0) +
+                      //             ' \u00B5M',
+                      //         style: TextStyle(
+                      //           fontWeight: FontWeight.bold,
+                      //         ),
+                      //       ),
+                      //       Text(
+                      //         'BV: ' +
+                      //             (trace8m / 100.0).toStringAsFixed(0) +
+                      //             ' \u00B5M',
+                      //         style: TextStyle(
+                      //           fontWeight: FontWeight.bold,
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(10, 10, 10, 1),
                         child: Text(
-                          'Detected Output 730 nm',
+                          'Temperature',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                           ),
@@ -761,7 +755,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(10, 10, 10, 1),
                         child: Text(
-                          'Detected Output 850 nm',
+                          'Humidity',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                           ),
@@ -851,7 +845,7 @@ class _BluetoothAppState extends State<BluetoothApp> {
             // }
 
             if (returnVar == 0) {
-              // Everything is done right and the outputs are in outList[19]
+              // Everything is done right and the outputs are in outList[20]
               outView();
             }
           }).onDone(() {
